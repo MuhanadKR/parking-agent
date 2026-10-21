@@ -1,0 +1,6 @@
+.venv/
+agent.log
+parking.db
+parking.db.bak
+__pycache__/
+.env
