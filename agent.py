@@ -8,6 +8,7 @@ from pathlib import Path
 import anthropic
 from jsonschema import Draft202012Validator
 from pydantic import BaseModel, Field, JsonValue
+from request_context import RequestIdFilter, run_metrics
 
 from tools import (
     BadArgumentsError, ToolError, UnknownToolError,
@@ -117,8 +118,11 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
     steps = 0
     input_tokens = 0
     output_tokens = 0
+    metrics = run_metrics.get()
 
     def finish(answer: str, stop_reason: str) -> AgentResult:
+        if metrics is not None:
+            metrics.stop_reason = stop_reason
         answer = answer.strip()
         return AgentResult(
             answer=answer or "The model returned no text answer. Please try again.",
@@ -133,6 +137,8 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
     messages = [{"role": "user", "content": question}]
 
     for _ in range(max_steps):
+        if metrics is not None:
+            metrics.steps += 1
         response = client.messages.create(
             model="claude-sonnet-5-5",
             max_tokens=1024,
@@ -143,6 +149,9 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
         steps += 1
         input_tokens += response.usage.input_tokens
         output_tokens += response.usage.output_tokens
+        if metrics is not None:
+            metrics.input_tokens = input_tokens
+            metrics.output_tokens = output_tokens
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "max_tokens":
@@ -158,6 +167,8 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
         tool_results = []
         for block in response.content:
             if block.type == "tool_use":
+                if metrics is not None:
+                    metrics.tools.append(block.name)
                 logger.info("[tool] %s(%s)", block.name, block.input)
                 tool_result = {
                     "type": "tool_result",
@@ -183,12 +194,17 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
     return finish(limit_message, "step_limit")
 
 
-def configure_logging() -> None:
+def configure_logging(log_path: Path | None = None) -> None:
     """Shared development logging for CLI and HTTP startup."""
+    handler = logging.FileHandler(
+        log_path or Path(__file__).resolve().with_name("agent.log"), encoding="utf-8"
+    )
+    handler.addFilter(RequestIdFilter())
     logging.basicConfig(
-        filename=Path(__file__).resolve().with_name("agent.log"),
+        handlers=[handler],
         level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        format="%(asctime)s %(levelname)s %(name)s request_id=%(request_id)s %(message)s",
+        force=True,
     )
 
 
@@ -199,7 +215,7 @@ def main() -> int:
         print("Cannot start: set ANTHROPIC_API_KEY before running the agent.")
         return 1
     try:
-        client = anthropic.Anthropic(max_retries=2)
+        client = anthropic.Anthropic(max_retries=2, timeout=30.0)
     except Exception:
         logger.exception("Client startup failed")
         print("Cannot start: check the API configuration.")
