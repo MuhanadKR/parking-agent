@@ -7,6 +7,7 @@ from pathlib import Path
 
 import anthropic
 from jsonschema import Draft202012Validator
+from pydantic import BaseModel, Field, JsonValue
 
 from tools import (
     BadArgumentsError, ToolError, UnknownToolError,
@@ -15,12 +16,30 @@ from tools import (
 
 logger = logging.getLogger(__name__)
 
+class ToolCall(BaseModel):
+    name: str
+    # Preserve malformed JSON inputs too, so validation failures can be reviewed.
+    input: JsonValue
+    is_error: bool
+
+
+class AgentResult(BaseModel):
+    answer: str
+    tool_calls: list[ToolCall] = Field(default_factory=list)
+    steps: int = Field(ge=0)
+    stop_reason: str
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+
+
 SYSTEM_PROMPT = (
+    "Only answer questions about parking lot occupancy and available slots. "
+    "For unrelated requests, explain your scope and ask for a parking question. "
     "You are a parking assistant. Answer parking questions only using successful "
     "tool results from this run. Never guess occupancy, availability, or lot IDs. "
     "If a tool fails, explain that the requested data could not be retrieved; "
     "ask for clarification when appropriate. Do not invent missing data. "
-    "Use the reading timestamps to describe how recent the data is."
+    "Report the reading timestamps without claiming how recent the data is."
 )
 
 LOT_ID_SCHEMA = {
@@ -91,11 +110,24 @@ def execute_tool(name: str, arguments: object) -> dict:
     return DISPATCH[name](**arguments)
 
 
-def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic) -> str:
+def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic) -> AgentResult:
     """Keep the full conversation for one question, with at most max_steps calls."""
     limit_message = f"Stopped after reaching the step limit ({max_steps}) without finishing."
+    tool_calls: list[ToolCall] = []
+    steps = 0
+    input_tokens = 0
+    output_tokens = 0
+
+    def finish(answer: str, stop_reason: str) -> AgentResult:
+        answer = answer.strip()
+        return AgentResult(
+            answer=answer or "The model returned no text answer. Please try again.",
+            tool_calls=tool_calls, steps=steps, stop_reason=stop_reason,
+            input_tokens=input_tokens, output_tokens=output_tokens,
+        )
+
     if max_steps <= 0:
-        return limit_message
+        return finish(limit_message, "step_limit")
 
     # Local history is discarded on failure; never persist an incomplete turn.
     messages = [{"role": "user", "content": question}]
@@ -108,17 +140,20 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
             messages=messages,
             tools=TOOLS,
         )
+        steps += 1
+        input_tokens += response.usage.input_tokens
+        output_tokens += response.usage.output_tokens
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "max_tokens":
-            return "The response reached its token limit before finishing. Please try a narrower question."
+            return finish("The response reached its token limit before finishing. Please try a narrower question.", "max_tokens")
         if response.stop_reason == "refusal":
-            return "The model declined this request. Please try rephrasing your question."
+            return finish("The model declined this request. Please try rephrasing your question.", "refusal")
 
         if response.stop_reason != "tool_use":
-            return "\n".join(
+            return finish("\n".join(
                 block.text for block in response.content if block.type == "text"
-            )
+            ), response.stop_reason)
 
         tool_results = []
         for block in response.content:
@@ -138,17 +173,27 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
                     })
                     tool_result["is_error"] = True
                 tool_results.append(tool_result)
+                tool_calls.append(ToolCall(
+                    name=block.name,
+                    input=block.input,
+                    is_error=tool_result.get("is_error", False),
+                ))
         messages.append({"role": "user", "content": tool_results})
 
-    return limit_message
+    return finish(limit_message, "step_limit")
 
 
-def main() -> int:
+def configure_logging() -> None:
+    """Shared development logging for CLI and HTTP startup."""
     logging.basicConfig(
         filename=Path(__file__).resolve().with_name("agent.log"),
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+
+
+def main() -> int:
+    configure_logging()
     if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
         logger.error("Startup failed: ANTHROPIC_API_KEY is missing")
         print("Cannot start: set ANTHROPIC_API_KEY before running the agent.")
@@ -172,7 +217,8 @@ def main() -> int:
             if not question:
                 continue
             try:
-                print(run_agent(question, client=client))
+                result = run_agent(question, client=client)
+                print(result.answer)
             except anthropic.AuthenticationError:
                 logger.exception("API authentication failed")
                 print("Authentication failed. Please check the API configuration.")
