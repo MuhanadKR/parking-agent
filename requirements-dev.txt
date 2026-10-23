@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Benchmark and FastAPI TestClient transport.
+httpx==0.28.1
