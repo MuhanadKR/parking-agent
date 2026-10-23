@@ -4,6 +4,9 @@ import json
 import logging
 import os
 from pathlib import Path
+from collections.abc import Generator
+from contextlib import closing
+from typing import Literal
 
 import anthropic
 from jsonschema import Draft202012Validator
@@ -42,6 +45,30 @@ SYSTEM_PROMPT = (
     "ask for clarification when appropriate. Do not invent missing data. "
     "Report the reading timestamps without claiming how recent the data is."
 )
+
+
+class TextEvent(BaseModel):
+    type: Literal["text"] = "text"
+    chunk: str
+
+
+class ToolStartEvent(BaseModel):
+    type: Literal["tool_start"] = "tool_start"
+    name: str
+
+
+class ToolEndEvent(BaseModel):
+    type: Literal["tool_end"] = "tool_end"
+    name: str
+    is_error: bool
+
+
+class DoneEvent(BaseModel):
+    type: Literal["done"] = "done"
+    result: AgentResult
+
+
+AgentEvent = TextEvent | ToolStartEvent | ToolEndEvent | DoneEvent
 
 LOT_ID_SCHEMA = {
     "type": "string",
@@ -112,6 +139,17 @@ def execute_tool(name: str, arguments: object) -> dict:
 
 
 def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic) -> AgentResult:
+    """Consume the shared streaming loop for CLI and non-streaming HTTP callers."""
+    with closing(run_agent_stream(question, max_steps, client=client)) as events:
+        for event in events:
+            if isinstance(event, DoneEvent):
+                return event.result
+    raise RuntimeError("Agent stream ended without a done event")
+
+
+def run_agent_stream(
+    question: str, max_steps: int = 8, *, client: anthropic.Anthropic
+) -> Generator[AgentEvent, None, None]:
     """Keep the full conversation for one question, with at most max_steps calls."""
     limit_message = f"Stopped after reaching the step limit ({max_steps}) without finishing."
     tool_calls: list[ToolCall] = []
@@ -131,7 +169,8 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
         )
 
     if max_steps <= 0:
-        return finish(limit_message, "step_limit")
+        yield DoneEvent(result=finish(limit_message, "step_limit"))
+        return
 
     # Local history is discarded on failure; never persist an incomplete turn.
     messages = [{"role": "user", "content": question}]
@@ -139,13 +178,16 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
     for _ in range(max_steps):
         if metrics is not None:
             metrics.steps += 1
-        response = client.messages.create(
+        with client.messages.stream(
             model="claude-sonnet-5-5",
             max_tokens=1024,
             system=SYSTEM_PROMPT,
             messages=messages,
             tools=TOOLS,
-        )
+        ) as stream:
+            for chunk in stream.text_stream:
+                yield TextEvent(chunk=chunk)
+            response = stream.get_final_message()
         steps += 1
         input_tokens += response.usage.input_tokens
         output_tokens += response.usage.output_tokens
@@ -155,18 +197,22 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "max_tokens":
-            return finish("The response reached its token limit before finishing. Please try a narrower question.", "max_tokens")
+            yield DoneEvent(result=finish("The response reached its token limit before finishing. Please try a narrower question.", "max_tokens"))
+            return
         if response.stop_reason == "refusal":
-            return finish("The model declined this request. Please try rephrasing your question.", "refusal")
+            yield DoneEvent(result=finish("The model declined this request. Please try rephrasing your question.", "refusal"))
+            return
 
         if response.stop_reason != "tool_use":
-            return finish("\n".join(
+            yield DoneEvent(result=finish("\n".join(
                 block.text for block in response.content if block.type == "text"
-            ), response.stop_reason)
+            ), response.stop_reason))
+            return
 
         tool_results = []
         for block in response.content:
             if block.type == "tool_use":
+                yield ToolStartEvent(name=block.name)
                 if metrics is not None:
                     metrics.tools.append(block.name)
                 logger.info("[tool] %s(%s)", block.name, block.input)
@@ -189,9 +235,10 @@ def run_agent(question: str, max_steps: int = 8, *, client: anthropic.Anthropic)
                     input=block.input,
                     is_error=tool_result.get("is_error", False),
                 ))
+                yield ToolEndEvent(name=block.name, is_error=tool_result.get("is_error", False))
         messages.append({"role": "user", "content": tool_results})
 
-    return finish(limit_message, "step_limit")
+    yield DoneEvent(result=finish(limit_message, "step_limit"))
 
 
 def configure_logging(log_path: Path | None = None) -> None:
