@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 from collections.abc import Generator
 from contextlib import closing
@@ -242,9 +243,11 @@ def run_agent_stream(
 
 
 def configure_logging(log_path: Path | None = None) -> None:
-    """Shared development logging for CLI and HTTP startup."""
-    handler = logging.FileHandler(
-        log_path or Path(__file__).resolve().with_name("agent.log"), encoding="utf-8"
+    """Log to stdout by default; LOG_FILE or an explicit path selects a file."""
+    destination = log_path or os.environ.get("LOG_FILE")
+    handler = (
+        logging.FileHandler(destination, encoding="utf-8")
+        if destination else logging.StreamHandler(sys.stdout)
     )
     handler.addFilter(RequestIdFilter())
     logging.basicConfig(
