@@ -24,7 +24,7 @@ At Lot A, payment is linked to the license plate you enter. If you entered the w
 
 ## Gate or kiosk faults
 
-If you cannot leave because of a gate or kiosk fault, call the 24-hour line. Staff open the gate remotely and waive the fee for that visit. If you believe your vehicle was damaged, send a written claim with photos within 14 days.
+If a Lot B gate fault prevents exit, call the 24-hour line. Staff open the gate remotely and waive the fee for that visit. Lot A has no barrier gate; if its kiosk fails, use the app or call support for payment assistance. If you believe your vehicle was damaged, send a written claim with photos within 14 days.
 
 ## Appealing a fine
 

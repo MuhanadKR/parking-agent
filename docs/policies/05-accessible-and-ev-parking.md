@@ -11,7 +11,7 @@ This document covers the accessible spaces and the electric vehicle (EV) chargin
 
 ### Who can use them
 
-Accessible spaces are for vehicles displaying a valid accessible parking placard, or vehicles with a registered accessible license plate. The placard must hang from the rear-view mirror and be visible. Accessible spaces cannot be reserved in advance. Using one without a valid placard carries a $250 fine.
+Accessible spaces are for vehicles displaying a valid accessible parking placard, or vehicles with a registered accessible license plate. The placard must hang from the rear-view mirror and be visible. Accessible spaces cannot be reserved in advance. Using one without either a valid placard or a registered accessible license plate carries a $250 fine.
 
 ### Placard discount
 

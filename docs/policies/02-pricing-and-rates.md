@@ -16,7 +16,7 @@ Lot A charges differ for daytime and overnight stays.
 
 - **Daytime (07:00 to 23:00):** $4.00 per hour for the first 2 hours, then $3.00 per hour for each additional hour.
 - **Daily maximum:** $24.00 per calendar day for daytime parking.
-- **Overnight flat rate (23:00 to 07:00):** $8.00 for a stay that covers the overnight period.
+- **Overnight flat rate (23:00 to 07:00):** $8.00 for any part of this overnight window, once the entry grace period has been exceeded. Daytime charges are additional; the $24 daytime cap does not include the overnight fee. The first-two-hours daytime tier resets each calendar day.
 
 ## Market Lot B rates
 

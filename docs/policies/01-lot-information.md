@@ -13,14 +13,14 @@ Harborline Parking operates two public parking lots: Riverside Lot A and Market 
 ## Market Lot B
 
 - **Capacity:** 12 spaces, numbered B-01 to B-12.
-- **Opening hours:** 06:00 to 22:00, every day. All vehicles must leave by 22:30. Overnight parking is not available at Lot B.
+- **Opening hours:** 06:00 to 22:00 for entry, every day. Exit remains available until 22:30. All vehicles must leave by 22:30. Overnight parking is not available at Lot B.
 - **Entry and exit:** ticket-based. Take a ticket from the barrier gate on entry and pay at the exit gate or in the Harborline app.
 - **Special spaces:** B-01 is the accessible space. Lot B has no electric vehicle charging.
 - **Exit gate payment:** the exit gate accepts cards and the Harborline app only. It does not accept cash.
 
 ## Maximum stay
 
-At Lot A, the maximum stay for pay-as-you-go parking is 24 consecutive hours. At Lot B, a vehicle can stay only within a single day of operation and must leave by 22:30. Monthly permit holders are exempt from the 24-hour maximum stay at Lot A. See the enforcement document for what happens when a limit is exceeded.
+At Lot A, the maximum stay for pay-as-you-go parking is 24 consecutive hours. At Lot B, a vehicle can stay only within a single day of operation and must leave by 22:30. Monthly Standard and Reserved permit holders are exempt from the 24-hour maximum stay at Lot A. See the enforcement document for what happens when a limit is exceeded.
 
 ## Accepted payment methods
 

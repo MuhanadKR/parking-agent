@@ -1,6 +1,6 @@
 # Harborline Parking: Permits
 
-Permits let regular visitors, residents and commuters park without paying hourly rates. A permit is tied to a license plate, not to a specific space, except for reserved permits.
+Permits let regular visitors, residents and commuters park without paying hourly rates during their validity hours. A permit is tied to a license plate, not to a specific space. Reserved permits authorize the reserved bay group described below.
 
 ## Permit types and prices
 
@@ -34,3 +34,4 @@ Apply online or by email. You need your vehicle registration and a photo ID. App
 - Permits cannot be transferred to another person.
 - Monthly Standard and Reserved permit holders are exempt from the 24-hour maximum stay at Lot A.
 - A permit does not cover electric vehicle charging fees or any fine.
+- Permits do not override accessible-space eligibility or active-charging requirements. Night Resident and Visitor Day Pass users cannot use A-03 to A-06. A Reserved permit authorizes any available space in A-03 to A-06; it does not assign a specific bay.

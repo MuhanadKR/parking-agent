@@ -6,3 +6,5 @@ jsonschema==4.26.0
 pydantic==2.14.1
 starlette==1.9.0
 uvicorn==0.54.0
+psycopg[binary]==3.3.6
+voyageai==0.5.0

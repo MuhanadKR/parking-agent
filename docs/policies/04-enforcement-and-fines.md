@@ -16,7 +16,7 @@ Rules are enforced with license plate recognition cameras and by patrol staff.
 | No payment and no valid permit | $45, reduced to $30 if paid within 7 days of the notice |
 | Staying more than 30 minutes past the paid time | $25 |
 | Parking in a permit-only space (A-03 to A-06) without a Reserved permit | $60 |
-| Using an accessible space without a valid placard | $250 |
+| Using an accessible space without a valid placard or registered accessible license plate | $250 |
 | Parking a non-electric vehicle in an EV space (A-19 and A-20) | $75 |
 | Exceeding the 24-hour maximum stay at Lot A | $50 for each additional 24-hour period |
 | Blocking a driving lane or occupying two spaces | $40 |
@@ -36,7 +36,7 @@ A fine is due within 30 days of the notice date. If it is not paid by then, a la
 
 ## Towing
 
-A vehicle that stays at Lot A for more than 72 hours in total, or that blocks access to the lot, may be towed. The tow fee is $120, plus storage of $15 per day charged by the tow yard. Paying the tow fee does not cancel the parking fines already issued.
+A vehicle without a Monthly Standard or Reserved Lot A permit that stays at Lot A for more than 72 hours in total may be towed. Any vehicle blocking access may be towed, including a permit holder. The tow fee is $120, plus storage of $15 per day charged by the tow yard. Paying the tow fee does not cancel the parking fines already issued.
 
 ## Appeals
 
